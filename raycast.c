@@ -15,11 +15,6 @@ Pixel* raycast(FILE* fp, int width, int height)
 
 	Pixel* pixMap = (Pixel*) malloc(sizeof(Pixel)*width*height);
 
-	V3 background = malloc(sizeof(double)*3);
-	background[0] = backgroundColorR;
-	background[1] = backgroundColorG;
-	background[2] = backgroundColorB;
-
 	r0 = malloc(sizeof(double)*3);
 	r0[0] = (double) cameraX;
 	r0[1] = (double) cameraY;
@@ -38,19 +33,10 @@ Pixel* raycast(FILE* fp, int width, int height)
 			double pz = cameraZ-1; // z coord is on screen
 			V3 ur = v3_unit(px,py,pz); // unit ray vector
 			int hitObjectIndex = shoot(ur);
-			if(hitObjectIndex!=-1)
-			{
-				pixMap[rowCounter*width+columnCounter].R = objects[hitObjectIndex]->diffuse_color[0]; // return node with the color of what was hit first
-				pixMap[rowCounter*width+columnCounter].G = objects[hitObjectIndex]->diffuse_color[1];
-				pixMap[rowCounter*width+columnCounter].B = objects[hitObjectIndex]->diffuse_color[2];
-			}
-			else
-			{
-				// return the background color since nothing was hit
-				pixMap[rowCounter*width+columnCounter].R = backgroundColorR;
-				pixMap[rowCounter*width+columnCounter].G = backgroundColorG;
-				pixMap[rowCounter*width+columnCounter].B = backgroundColorB;
-			}
+			V3 pixelColor = illuminate(hitObjectIndex);
+			pixMap[rowCounter*width+columnCounter].R = pixelColor[0]; // return node with the color of what was hit first
+			pixMap[rowCounter*width+columnCounter].G = pixelColor[1];
+			pixMap[rowCounter*width+columnCounter].B = pixelColor[2];		
 		}
     }
 
@@ -83,6 +69,20 @@ int shoot(V3 rayVector)
 	}
 
 	return hitObjectIndex; // should only be a postive number or -1
+}
+
+V3 illuminate(int hitObjectIndex)
+{
+	if(hitObjectIndex!=-1) return objects[hitObjectIndex]->diffuse_color;// return the hit node's color
+	else
+	{
+		// return the background color since nothing was hit
+		V3 background = malloc(sizeof(double)*3);
+		background[0] = backgroundColorR;
+		background[1] = backgroundColorG;
+		background[2] = backgroundColorB;
+		return background;
+	}
 }
 
 // does the math to calculate a sphere intersection, and if the sphere was intersected then the distance to that sphere
