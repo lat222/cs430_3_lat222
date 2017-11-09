@@ -8,6 +8,7 @@ Pixel* raycast(FILE* fp, int width, int height)
 		fprintf(stderr, "ERROR: No objects were read in\n");
 		exit(0);
 	}
+	// TODO: what to do for no light??
 
 	
 	// Finished reading in file, now is the time to start Raycasting!
@@ -68,7 +69,6 @@ int shoot(V3 rayVector)
 		// check if the object intersects with the vector
 		if(objects[i]->type == 's') result = ray_sphere_intersection(rayVector,objects[i]);
 		else if(objects[i]->type == 'p') result = ray_plane_intersection(rayVector,objects[i]);
-		else if(objects[i]->type == 'l') continue;
 		else
 		{
 			fprintf(stderr, "ERROR: Objects can only be type sphere, plane, or light\n");
@@ -269,6 +269,7 @@ void read_file(FILE* fp)
 
 	// Store the first object after camera
 	objectCount = 0;
+	lightCount = 0;
 	//Object* objects = malloc(sizeof(Object)*129);
 	while((read = getline(&line, &len, fp)) != -1)
 	{
@@ -625,7 +626,9 @@ void read_file(FILE* fp)
 				fprintf(stderr, "ERROR: No more than five properties should have been read in for sphere or plane object\n");
 				exit(0);
 			}
-			objects[objectCount++] = object;
+			// store the object depending on its type
+			if(object->type == 'l') lights[lightCount++] = object;
+			else objects[objectCount++] = object;
 		}
 		else
 		{

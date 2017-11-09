@@ -16,6 +16,8 @@
 #define cameraY 0
 #define cameraZ 0
 
+#define shininess 20
+
 typedef double* V3;
 
 typedef struct Pixel {
@@ -46,6 +48,8 @@ typedef struct Object
 // Global variables
 Object* objects[maxObjects];
 int objectCount;
+Object* lights[maxObjects];
+int lightCount;
 V3 r0;
 float worldWidth,worldHeight; // these will be the camera width and height
 
