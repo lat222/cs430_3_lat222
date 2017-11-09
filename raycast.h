@@ -31,9 +31,16 @@ typedef struct Object
 	char type;
 	V3 pix;
 	V3 position;
-	int radius;
 	V3 normal;
-
+	int radius;
+	V3 diffuse_color;
+	V3 specular_color;
+	double radialA0;
+	double radialA1;
+	double radialA2;
+	double theta;
+	double angularA0;
+	V3 direction;
 } Object;
 
 // Global variables

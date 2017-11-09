@@ -31,10 +31,13 @@ Pixel* raycast(FILE* fp, int width, int height)
 			double px = cameraX - worldWidth / 2 + pixwidth * (columnCounter + 0.5); // x coord of column
 			double pz = cameraZ-1; // z coord is on screen
 			V3 ur = v3_unit(px,py,pz); // unit ray vector
-			V3 color = shoot(ur);
+			/*V3 color = shoot(ur);
 			pixMap[rowCounter*width+columnCounter].R = color[0]; // return node with the color of what was hit first
 			pixMap[rowCounter*width+columnCounter].G = color[1];
-			pixMap[rowCounter*width+columnCounter].B = color[2];
+			pixMap[rowCounter*width+columnCounter].B = color[2];*/
+			pixMap[rowCounter*width+columnCounter].R = 0; // return node with the color of what was hit first
+			pixMap[rowCounter*width+columnCounter].G = 0;
+			pixMap[rowCounter*width+columnCounter].B = 0;
 		}
     }
 
@@ -51,19 +54,12 @@ V3 shoot(V3 rayVector)
 	{
 		double result = -1;
 		// check if the object intersects with the vector
-		if(objects[i]->type == 's')
-		{
-			result = ray_sphere_intersection(rayVector,objects[i]);
-			//printf("s%d: ",i);
-		}
-		else if(objects[i]->type == 'p')
-		{
-			result = ray_plane_intersection(rayVector,objects[i]);
-
-		}
+		if(objects[i]->type == 's') result = ray_sphere_intersection(rayVector,objects[i]);
+		else if(objects[i]->type == 'p') result = ray_plane_intersection(rayVector,objects[i]);
+		else if(objects[i]->type == 'l') continue;
 		else
 		{
-			fprintf(stderr, "ERROR: Objects can only be type sphere or plane\n");
+			fprintf(stderr, "ERROR: Objects can only be type sphere, plane, or light\n");
 			exit(0);
 		}
 
@@ -303,20 +299,27 @@ void read_file(FILE* fp)
 								object->type = 'p';
 								object_read_in = 'p';
 							}
+							else if(strcmp(token,"light") == 0)
+							{
+								object->type = 'l';
+								object_read_in = 'l';
+							}
 							else
 							{
-								fprintf(stderr, "ERROR: Objects can only be type sphere or plane.\n");
+								fprintf(stderr, "ERROR: Objects can only be type sphere, plane, or light.\n");
 								exit(0);
 							}
 						}
 						else
 						{
+							// property_read_in: c = color, p = position, r = radius, n = normal, f = diffuse color, s = specular color, 
+							// t = theta, 0 = radial-a0, 1 = radial-a1, 2 = radial-a2, 3 = angular-a0, d = direction
 							if(strcmp(token,"color") == 0 && property_read_in == '\0')
 							{
 								if(vectorNum == 3) vectorNum = 0;
 								else
 								{
-									fprintf(stderr, "ERROR: Normal, Position, and Color should include 3 numbers in brackets\n");
+									fprintf(stderr, "ERROR: Vectors should include 3 numbers in brackets\n");
 									exit(0);
 								}
 								property_read_in = 'c';
@@ -327,7 +330,7 @@ void read_file(FILE* fp)
 								if(vectorNum == 3) vectorNum = 0;
 								else
 								{
-									fprintf(stderr, "ERROR: Normal, Position, and Color should include 3 numbers in brackets\n");
+									fprintf(stderr, "ERROR: Vectors should include 3 numbers in brackets\n");
 									exit(0);
 								}
 								property_read_in = 'p';
@@ -343,12 +346,70 @@ void read_file(FILE* fp)
 								if(vectorNum == 3) vectorNum = 0;
 								else
 								{
-									fprintf(stderr, "ERROR: Normal, Position, and Color should include 3 numbers in brackets\n");
+									fprintf(stderr, "ERROR: Vectors should include 3 numbers in brackets\n");
 									exit(0);
 								}
 								property_read_in = 'n';
 								propertiesAdded++;
 							}
+							else if(strcmp(token,"diffuse_color") == 0 && property_read_in == '\0' && object_read_in != 'l')
+							{
+								if(vectorNum == 3) vectorNum = 0;
+								else
+								{
+									fprintf(stderr, "ERROR: Vectors should include 3 numbers in brackets\n");
+									exit(0);
+								}
+								property_read_in = 'f';
+								propertiesAdded++;
+							}
+							else if(strcmp(token,"specular_color") == 0 && property_read_in == '\0' && object_read_in != 'l')
+							{
+								if(vectorNum == 3) vectorNum = 0;
+								else
+								{
+									fprintf(stderr, "ERROR: Vectors should include 3 numbers in brackets\n");
+									exit(0);
+								}
+								property_read_in = 's';
+								propertiesAdded++;
+							}
+							else if(strcmp(token,"theta") == 0 && object_read_in == 'l' && property_read_in == '\0')
+							{
+								property_read_in = 't';
+								propertiesAdded++;
+							}
+							else if(strcmp(token,"radial-a0") == 0 && object_read_in == 'l' && property_read_in == '\0')
+							{
+								property_read_in = '0';
+								propertiesAdded++;
+							}
+							else if(strcmp(token,"radial-a1") == 0 && object_read_in == 'l' && property_read_in == '\0')
+							{
+								property_read_in = '1';
+								propertiesAdded++;
+							}
+							else if(strcmp(token,"radial-a2") == 0 && object_read_in == 'l' && property_read_in == '\0')
+							{
+								property_read_in = '2';
+								propertiesAdded++;
+							}
+							else if(strcmp(token,"angular-a0") == 0 && object_read_in == 'l' && property_read_in == '\0')
+							{
+								property_read_in = '3';
+								propertiesAdded++;
+							}
+							else if(strcmp(token,"direction") == 0 && object_read_in == 'l' && property_read_in == '\0')
+							{
+								if(vectorNum == 3) vectorNum = 0;
+								else
+								{
+									fprintf(stderr, "ERROR: Vectors should include 3 numbers in brackets\n");
+									exit(0);
+								}
+								property_read_in = 'd';
+								propertiesAdded++;
+							}	
 							else if(property_read_in == 'c')
 							{
 								if(vectorNum >= 3)
@@ -424,6 +485,119 @@ void read_file(FILE* fp)
 								}
 								property_read_in = '\0';
 							}
+							else if(property_read_in == 'f')
+							{
+								if(vectorNum >= 3)
+								{
+									fprintf(stderr, "ERROR: Diffuse color can only have 3 channels.\n");
+									exit(0);
+								}
+								else
+								{
+									// malloc the space to add the pixel if nothing has been stored yet TODO: check if space was malloced???
+									if(vectorNum == 0) object->diffuse_color = malloc(sizeof(double)*3);
+									if(vectorNum == 2) property_read_in = '\0';
+									// check that the value is valid and store it if it is
+									if(strcmp(token,"0") == 0 || atof(token) > 0) object->diffuse_color[vectorNum++] = atof(token);
+									else
+									{
+										fprintf(stderr, "ERROR: Values for the Diffuse Color Property must be positive numbers.\n");
+										exit(0);
+									}
+								}
+							}
+							else if(property_read_in == 's')
+							{
+								if(vectorNum >= 3)
+								{
+									fprintf(stderr, "ERROR: Specular color can only have 3 channels.\n");
+									exit(0);
+								}
+								else
+								{
+									// malloc the space to add the pixel if nothing has been stored yet TODO: check if space was malloced???
+									if(vectorNum == 0) object->specular_color = malloc(sizeof(double)*3);
+									if(vectorNum == 2) property_read_in = '\0';
+									// check that the value is valid and store it if it is
+									if(strcmp(token,"0") == 0 || atof(token) > 0) object->specular_color[vectorNum++] = atof(token);
+									else
+									{
+										fprintf(stderr, "ERROR: Values for the Specular Color Property must be positive numbers.\n");
+										exit(0);
+									}	
+							}
+							}
+							else if(property_read_in == 't')
+							{
+								if(strcmp(token,"0") == 0 || atof(token) != 0) object->theta = atof(token);
+								else
+								{
+									fprintf(stderr, "ERROR: Values for the Theta Property must be numbers.\n");
+									exit(0);
+								}
+								property_read_in = '\0';
+							}
+							else if(property_read_in == '0')
+							{
+								if(strcmp(token,"0") == 0 || atof(token) != 0) object->radialA0 = atof(token);
+								else
+								{
+									fprintf(stderr, "ERROR: Values for the Radial-a0 Property must be numbers.\n");
+									exit(0);
+								}
+								property_read_in = '\0';
+							}
+							else if(property_read_in == '1')
+							{
+								if(strcmp(token,"0") == 0 || atof(token) != 0) object->radialA1 = atof(token);
+								else
+								{
+									fprintf(stderr, "ERROR: Values for the Radial-a1 Property must be numbers.\n");
+									exit(0);
+								}
+								property_read_in = '\0';
+							}
+							else if(property_read_in == '2')
+							{
+								if(strcmp(token,"0") == 0 || atof(token) != 0) object->radialA2 = atof(token);
+								else
+								{
+									fprintf(stderr, "ERROR: Values for the Radial-a2 Property must be numbers.\n");
+									exit(0);
+								}
+								property_read_in = '\0';
+							}
+							else if(property_read_in == '3')
+							{
+								if(strcmp(token,"0") == 0 || atof(token) != 0) object->angularA0 = atof(token);
+								else
+								{
+									fprintf(stderr, "ERROR: Values for the Angular-a0 Property must be numbers.\n");
+									exit(0);
+								}
+								property_read_in = '\0';
+							}
+							else if(property_read_in == 'd')
+							{
+								if(vectorNum >= 3)
+								{
+									fprintf(stderr, "ERROR: Direction property can only have 3 coordinates.\n");
+									exit(0);
+								}
+								else
+								{
+									// malloc the space to add the pixel if nothing has been stored yet TODO: check if space was malloced???
+									if(vectorNum == 0) object->direction = malloc(sizeof(double)*3);
+									if(vectorNum == 2) property_read_in = '\0';
+									// check that the value is valid and store it if it is
+									if(strcmp(token,"0") == 0 || atof(token) != 0) object->direction[vectorNum++] = atof(token);
+									else
+									{
+										fprintf(stderr, "ERROR: Values for the Direction Property must be numbers.");
+										exit(0);
+									}
+								}
+							}
 							else
 							{
 								fprintf(stderr, "ERROR: Invalid value or property\n");
@@ -435,9 +609,19 @@ void read_file(FILE* fp)
 				token = strtok(NULL," ,\t:[]");
 			}
 
-			if(propertiesAdded != 3)
+			if(propertiesAdded < 3)
 			{
-				fprintf(stderr, "ERROR: Three properties should have been read in -- NOT %d\n", propertiesAdded);
+				fprintf(stderr, "ERROR: At least three properties should have been read in -- NOT %d\n", propertiesAdded);
+				exit(0);
+			}
+			else if(propertiesAdded > 5 && object->type != 'l')
+			{
+				fprintf(stderr, "ERROR: No more than five properties should have been read in for sphere or plane object\n");
+				exit(0);
+			}
+			else if(propertiesAdded > 6 && object->type == 'l')
+			{
+				fprintf(stderr, "ERROR: No more than five properties should have been read in for sphere or plane object\n");
 				exit(0);
 			}
 			objects[objectCount++] = object;
@@ -447,6 +631,13 @@ void read_file(FILE* fp)
 			fprintf(stderr, "ERROR: More than 128 objects in input file.\n");
 			exit(0);
 		}
+	}
+	for(int i = 0; i < objectCount; i++)
+	{
+		if(objects[i]->type == 's') printf("%d - %c, c1:  %.02f, p3: %02f,r: %d\n",i,objects[i]->type,objects[i]->pix[0],objects[i]->position[2],objects[i]->radius);
+		else if(objects[i]->type == 'p') printf("%d - %c, c1:  %.02f, p3: %02f, n2: %.02f\n",i,objects[i]->type,objects[i]->pix[0],objects[i]->position[2],objects[i]->normal[1]);
+		//else if(objects[i]->type =='l') printf("%d - %c, c1:  %.02f, p3: %02f\n",i,objects[i]->type,objects[i]->pix[0],objects[i]->position[2]);
+		else printf("Bad object type - %c",objects[i]->type);
 	}
 }
 
