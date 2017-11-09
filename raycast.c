@@ -14,6 +14,11 @@ Pixel* raycast(FILE* fp, int width, int height)
 
 	Pixel* pixMap = (Pixel*) malloc(sizeof(Pixel)*width*height);
 
+	V3 background = malloc(sizeof(double)*3);
+	background[0] = backgroundColorR;
+	background[1] = backgroundColorG;
+	background[2] = backgroundColorB;
+
 	r0 = malloc(sizeof(double)*3);
 	r0[0] = (double) cameraX;
 	r0[1] = (double) cameraY;
@@ -31,13 +36,20 @@ Pixel* raycast(FILE* fp, int width, int height)
 			double px = cameraX - worldWidth / 2 + pixwidth * (columnCounter + 0.5); // x coord of column
 			double pz = cameraZ-1; // z coord is on screen
 			V3 ur = v3_unit(px,py,pz); // unit ray vector
-			/*V3 color = shoot(ur);
-			pixMap[rowCounter*width+columnCounter].R = color[0]; // return node with the color of what was hit first
-			pixMap[rowCounter*width+columnCounter].G = color[1];
-			pixMap[rowCounter*width+columnCounter].B = color[2];*/
-			pixMap[rowCounter*width+columnCounter].R = 0; // return node with the color of what was hit first
-			pixMap[rowCounter*width+columnCounter].G = 0;
-			pixMap[rowCounter*width+columnCounter].B = 0;
+			int hitObjectIndex = shoot(ur);
+			if(hitObjectIndex!=-1)
+			{
+				pixMap[rowCounter*width+columnCounter].R = objects[hitObjectIndex]->diffuse_color[0]; // return node with the color of what was hit first
+				pixMap[rowCounter*width+columnCounter].G = objects[hitObjectIndex]->diffuse_color[1];
+				pixMap[rowCounter*width+columnCounter].B = objects[hitObjectIndex]->diffuse_color[2];
+			}
+			else
+			{
+				// return the background color since nothing was hit
+				pixMap[rowCounter*width+columnCounter].R = backgroundColorR;
+				pixMap[rowCounter*width+columnCounter].G = backgroundColorG;
+				pixMap[rowCounter*width+columnCounter].B = backgroundColorB;
+			}
 		}
     }
 
@@ -45,7 +57,7 @@ Pixel* raycast(FILE* fp, int width, int height)
 }
 
 // returns the closest object that intersects with the vector
-V3 shoot(V3 rayVector)
+int shoot(V3 rayVector)
 {
 	int hitObjectIndex = -1;
 	double lowestT = -1; // no intersection so far
@@ -70,18 +82,7 @@ V3 shoot(V3 rayVector)
 		}
 	}
 
-	// return the pix of the intersected object
-	if(hitObjectIndex != -1)
-	{
-		return objects[hitObjectIndex]->pix;
-	}
-	// did not intersect anything, so return a background color pixel
-	// return a black pixel, which is the background color
-	V3 background = malloc(sizeof(double)*3);
-	background[0] = backgroundColorR;
-	background[1] = backgroundColorG;
-	background[2] = backgroundColorB;
-	return background;
+	return hitObjectIndex; // should only be a postive number or -1
 }
 
 // does the math to calculate a sphere intersection, and if the sphere was intersected then the distance to that sphere
@@ -631,13 +632,6 @@ void read_file(FILE* fp)
 			fprintf(stderr, "ERROR: More than 128 objects in input file.\n");
 			exit(0);
 		}
-	}
-	for(int i = 0; i < objectCount; i++)
-	{
-		if(objects[i]->type == 's') printf("%d - %c, c1:  %.02f, p3: %02f,r: %d\n",i,objects[i]->type,objects[i]->pix[0],objects[i]->position[2],objects[i]->radius);
-		else if(objects[i]->type == 'p') printf("%d - %c, c1:  %.02f, p3: %02f, n2: %.02f\n",i,objects[i]->type,objects[i]->pix[0],objects[i]->position[2],objects[i]->normal[1]);
-		//else if(objects[i]->type =='l') printf("%d - %c, c1:  %.02f, p3: %02f\n",i,objects[i]->type,objects[i]->pix[0],objects[i]->position[2]);
-		else printf("Bad object type - %c",objects[i]->type);
 	}
 }
 

@@ -53,7 +53,8 @@ float worldWidth,worldHeight; // these will be the camera width and height
 Pixel* raycast(FILE* fp, int width, int height);
 
 // returns the pixel struct of the nearest hit object
-V3 shoot(V3 rayVector);
+int shoot(V3 rayVector);
+
 // returns the distance t if the ray vector intersected with the object
 double ray_sphere_intersection(V3 rayVector, Object* object);
 double ray_plane_intersection(V3 rayVector, Object* object);
