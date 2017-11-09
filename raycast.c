@@ -33,7 +33,7 @@ Pixel* raycast(FILE* fp, int width, int height)
 			double pz = cameraZ-1; // z coord is on screen
 			V3 ur = v3_unit(px,py,pz); // unit ray vector
 			int hitObjectIndex = shoot(ur);
-			V3 pixelColor = illuminate(hitObjectIndex);
+			V3 pixelColor = illuminate(hitObjectIndex,r0,ur);
 			pixMap[rowCounter*width+columnCounter].R = pixelColor[0]; // return node with the color of what was hit first
 			pixMap[rowCounter*width+columnCounter].G = pixelColor[1];
 			pixMap[rowCounter*width+columnCounter].B = pixelColor[2];		
@@ -71,18 +71,39 @@ int shoot(V3 rayVector)
 	return hitObjectIndex; // should only be a postive number or -1
 }
 
-V3 illuminate(int hitObjectIndex)
+void illuminate(int hitObjectIndex, V3 r0, V3 ur, int row, int column, int width)
 {
-	if(hitObjectIndex!=-1) return objects[hitObjectIndex]->diffuse_color;// return the hit node's color
-	else
-	{
-		// return the background color since nothing was hit
-		V3 background = malloc(sizeof(double)*3);
-		background[0] = backgroundColorR;
-		background[1] = backgroundColorG;
-		background[2] = backgroundColorB;
-		return background;
+	double* color = malloc(sizeof(double)*3);
+    color[0] = 0; // ambient_color[0];
+    color[1] = 0; // ambient_color[1];
+    color[2] = 0; // ambient_color[2];
+
+    for (int j=0; light[j] != NULL; j+=1) 
+    {
+      // Shadow test
+    	V3 R0n = v3_add(v3_scale(ur,closest_t), R0);
+    	V3 Rdn = v3_subtract(light[j]->position, R0n);
+      	closest_shadow_object = shoot(Rdn);
+      	if (closest_shadow_object != -1) 
+      	{
+			// N, L, R, V
+			V3 N;
+			if(objects[closest_shadow_object]->type == 'p') N = objects[closest_shadow_object]>normal; // plane
+			else if(objects[closest_shadow_object]->type == 's') N = v3_subtract(R0n,objects[closest_shadow_object]->position); // sphere
+			//L = Rdn; // light_position - Ron;
+			//R = reflection of L;
+			V3 V = Rd;
+			V3 diffuse = objects[hitObjectIndex]->diffuse_color; // uses object's diffuse color
+			V3 specular = objects[hitObjectIndex]->specular_color; // uses object's specular color
+			color[0] += v3_add(diffuse, specular);
+			color[1] += v3_add(diffuse, specular);
+			color[2] += v3_add(diffuse, specular);
+		}
 	}
+    // The color has now been calculated
+    pixMap[row*width+column].R = (unsigned char)(maxColor * clamp(color[0]));
+    pixMap[row*width+column].G = (unsigned char)(255 * clamp(color[1]));
+    pixMap[row*width+column].B = (unsigned char)(255 * clamp(color[2]));
 }
 
 // does the math to calculate a sphere intersection, and if the sphere was intersected then the distance to that sphere
@@ -154,6 +175,17 @@ V3 v3_subtract(V3 a, V3 b)
 	c[0] = a[0] - b[0];
 	c[1] = a[1] - b[1];
 	c[2] = a[2] - b[2];
+
+	return c;
+}
+
+V3 v3_add(V3 a, V3 b)
+{
+	V3 c = malloc(sizeof(double) * 3);
+
+	c[0] = a[0] + b[0];
+	c[1] = a[1] + b[1];
+	c[2] = a[2] + b[2];
 
 	return c;
 }

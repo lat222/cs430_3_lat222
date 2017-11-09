@@ -69,6 +69,7 @@ double ray_plane_intersection(V3 rayVector, Object* object);
 int check_file_path(char* fp);
 
 V3 v3_subtract(V3 a, V3 b);
+V3 v3_add(V3 a, V3 b);
 V3 v3_scale(V3 a, double b);
 double v3_dot(V3 a, V3 b);
 V3 v3_assign(double a, double b, double c);
