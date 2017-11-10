@@ -76,17 +76,33 @@ void illuminate(int hitObjectIndex, V3 r0, V3 ur, int pixMapIndex)
 
     if(hitObjectIndex != -1)
     {
+    	float closest_t;
+      	if(objects[hitObjectIndex]->type == 'p') closest_t = ray_plane_intersection(ur,objects[hitObjectIndex]);
+      	else if(objects[hitObjectIndex]->type == 's') closest_t = ray_sphere_intersection(ur,objects[hitObjectIndex]);
+      	else
+      	{
+      		fprintf(stderr, "ERROR: Objects must be of type Plane or Sphere\n");
+      		exit(0);
+      	}
+    	V3 R0n = v3_add(v3_scale(ur,closest_t), r0); // location of current object pixel
+
+    	// find the current object normal
+    	V3 objectNormal;
+		if(objects[hitObjectIndex]->type == 'p') objectNormal = objects[hitObjectIndex]->normal; // plane
+		else if(objects[hitObjectIndex]->type == 's') 
+		{
+			V3 objectN = v3_subtract(R0n,objects[hitObjectIndex]->position); // sphere
+			objectNormal = v3_unit(objectN[0],objectN[1],objectN[2]);
+			free(objectN);
+		}
+
 
 	    for (int j = 0; j < lightCount; j++ ) 
 	    {
 	      	// Shadow test
-	      	float closest_t;
-	      	if(objects[hitObjectIndex]->type == 'p') closest_t = ray_plane_intersection(ur,objects[hitObjectIndex]);
-	      	else if(objects[hitObjectIndex]->type == 's') closest_t = ray_sphere_intersection(ur,objects[hitObjectIndex]);
-
-	    	V3 R0n = v3_add(v3_scale(ur,closest_t), r0); // location of current object pixel
 	    	V3 Rdn = v3_subtract(lights[j]->position, R0n); // vector from that location to light
 	    	Rdn = v3_unit(Rdn[0],Rdn[1],Rdn[2]); // make this a unit vector
+
 	    	float lightDistance = v3_distance(lights[j]->position,R0n); // calculate distance to light
 
 	    	// vector from light to object
@@ -95,16 +111,6 @@ void illuminate(int hitObjectIndex, V3 r0, V3 ur, int pixMapIndex)
 
 	    	// unit vector of the light's direction vector
 	    	V3 vl = v3_unit(lights[j]->direction[0],lights[j]->direction[1],lights[j]->direction[2]);
-
-	    	// find the current object normal
-	    	V3 objectNormal;
-			if(objects[hitObjectIndex]->type == 'p') objectNormal = objects[hitObjectIndex]->normal; // plane
-			else if(objects[hitObjectIndex]->type == 's') 
-			{
-				V3 objectN = v3_subtract(R0n,objects[hitObjectIndex]->position); // sphere
-				objectNormal = v3_unit(objectN[0],objectN[1],objectN[2]);
-				free(objectN);
-			}
 
 			// find unit reflection vector
 			// TODO: what is the equation for the reflection vector???
@@ -118,7 +124,7 @@ void illuminate(int hitObjectIndex, V3 r0, V3 ur, int pixMapIndex)
 			{
 
 				if(i==hitObjectIndex) continue;
-				// TODO: change Rdn in ray_sphere_intersections to deal with reflection
+				// TODO: change Rdn in ray_sphere_intersections to deal with reflection???
 				// check if the object intersects with the vector
 				if(objects[i]->type == 's') t = ray_sphere_intersection(Rdn,objects[i]);
 				else if(objects[i]->type == 'p') t = ray_plane_intersection(Rdn,objects[i]);
@@ -137,7 +143,7 @@ void illuminate(int hitObjectIndex, V3 r0, V3 ur, int pixMapIndex)
 			// there is nothing casting a shadow over the object
 	      	if (shadow == -1) 
 	      	{
-				// TODO: find the diffuse and specular reflection
+				// TODO: find the diffuse and specular reflection, What to do when there is no specular color
 				V3 diffuse = objects[hitObjectIndex]->diffuse_color; // uses object's diffuse color
 				V3 specular = objects[hitObjectIndex]->specular_color; // uses object's specular color
 
@@ -147,8 +153,17 @@ void illuminate(int hitObjectIndex, V3 r0, V3 ur, int pixMapIndex)
 				color[0] += foundFrad*foundFang*(diffuse[0] + specular[0]);
 				color[1] += foundFrad*foundFang*(diffuse[1] + specular[1]);
 				color[2] += foundFrad*foundFang*(diffuse[2] + specular[2]);
+
+				free(diffuse);
+				free(specular);
 			}
+			free(Rdn);
+			free(v0);
+			free(vl);
+			free(reflection);
 		}
+		free(R0n);
+		free(objectNormal);
 	}
     // The color has now been calculated
     pixMap[pixMapIndex].R = (unsigned char)(clamp(color[0]));
