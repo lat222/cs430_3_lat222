@@ -96,7 +96,7 @@ void illuminate(int hitObjectIndex, V3 r0, V3 ur, int pixMapIndex)
 			free(objectN);
 		}
 
-		
+
 	    for (int j = 0; j < lightCount; j++ ) 
 	    {
 	      	// Shadow test
@@ -112,9 +112,7 @@ void illuminate(int hitObjectIndex, V3 r0, V3 ur, int pixMapIndex)
 	    	// unit vector of the light's direction vector
 	 		V3 vl = v3_unit(lights[j]->direction[0],lights[j]->direction[1],lights[j]->direction[2]);
 
-			// find unit reflection vector
-			V3 reflection = v3_subtract(v0,v3_scale(objectNormal, 2*v3_dot(objectNormal,v0)));
-			reflection = v3_unit(reflection[0],reflection[1],reflection[2]);
+	 		// TODO: reflection vector??
 
 	      	int shadow = -1;
 			double t = -1; // no intersection so far
