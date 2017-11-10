@@ -130,7 +130,7 @@ void illuminate(int hitObjectIndex, V3 r0, V3 ur, int pixMapIndex)
 				else if(objects[i]->type == 'p') t = ray_plane_intersection(Rdn,objects[i]);
 				else
 				{
-					fprintf(stderr, "ERROR: Objects can only be type sphere, plane, or light\n");
+					fprintf(stderr, "ERROR: Objects can only be type sphere or plane\n");
 					exit(0);
 				}
 
