@@ -67,24 +67,52 @@ int shoot(V3 rayVector)
 			hitObjectIndex = i;
 		}
 	}
-
 	return hitObjectIndex; // should only be a postive number or -1
 }
 
 void illuminate(int hitObjectIndex, V3 r0, V3 ur, int row, int column, int width)
 {
-	double* color = malloc(sizeof(double)*3);
-    color[0] = 0; // ambient_color[0];
-    color[1] = 0; // ambient_color[1];
-    color[2] = 0; // ambient_color[2];
+	V3 color = malloc(sizeof(double)*3);
+    color[0] = backgroundColorR; // ambient_color[0];
+    color[1] = backgroundColorG; // ambient_color[1];
+    color[2] = backgroundColorB; // ambient_color[2];
 
-    for (int j=0; light[j] != NULL; j+=1) 
+    for (int j = 0; j < lightCount; j++ ) 
     {
-      // Shadow test
+      	// Shadow test
+      	float closest_t;
+      	if(objects[hitObjectIndex]->type == 'p') closest_t = ray_plane_intersection(ur,objects[hitObjectIndex]);
+      	else if(objects[hitObjectIndex]->type == 's') closest_t = ray_sphere_intersection(ur,objects[hitObjectIndex]);
+
+    	// TODO: This is a different R0, then the old one...
     	V3 R0n = v3_add(v3_scale(ur,closest_t), R0);
     	V3 Rdn = v3_subtract(light[j]->position, R0n);
-      	closest_shadow_object = shoot(Rdn);
-      	if (closest_shadow_object != -1) 
+
+      	int shadowIndex = -1;
+		double t = -1; // no intersection so far
+		// loop through the entire linked list of objects and set t to the closest intersected object
+		for(int i = 0; i < objectCount; i++ )
+		{
+
+			if(i==hitObjectIndex) continue;
+			double result = -1;
+			// check if the object intersects with the vector
+			if(objects[i]->type == 's') result = ray_sphere_intersection(rayVector,objects[i]);
+			else if(objects[i]->type == 'p') result = ray_plane_intersection(rayVector,objects[i]);
+			else
+			{
+				fprintf(stderr, "ERROR: Objects can only be type sphere, plane, or light\n");
+				exit(0);
+			}
+
+			if(result > 0 && (result < t || t == -1))	// this intersection is less than t is already so set t to this result and set hitobject to this object
+			{
+				t = result;
+				shadowIndex = i;
+			}
+		}
+		// there is nothing casting a shadow over the object
+      	if (shadowIndex == -1) 
       	{
 			// N, L, R, V
 			V3 N;
@@ -93,17 +121,37 @@ void illuminate(int hitObjectIndex, V3 r0, V3 ur, int row, int column, int width
 			//L = Rdn; // light_position - Ron;
 			//R = reflection of L;
 			V3 V = Rd;
+			// TODO: find the diffuse and specular reflection
 			V3 diffuse = objects[hitObjectIndex]->diffuse_color; // uses object's diffuse color
 			V3 specular = objects[hitObjectIndex]->specular_color; // uses object's specular color
-			color[0] += v3_add(diffuse, specular);
-			color[1] += v3_add(diffuse, specular);
-			color[2] += v3_add(diffuse, specular);
+
+			double foundFrad = frad(lightDistance, lights[i]->radialA0,lights[i]->radialA1,lights[i]->radialA2);
+			double foundFang = fang(lights[i]->angularA0,lights[i]->theta,v0,v1);
+
+			color[0] += foundFrad*foundFang*(diffuse[0] + specular[0]);
+			color[1] += foundFrad*foundFang*(diffuse[1] + specular[1]);
+			color[2] += foundFrad*foundFang*(diffuse[2] + specular[2]);
 		}
 	}
     // The color has now been calculated
     pixMap[row*width+column].R = (unsigned char)(maxColor * clamp(color[0]));
     pixMap[row*width+column].G = (unsigned char)(255 * clamp(color[1]));
     pixMap[row*width+column].B = (unsigned char)(255 * clamp(color[2]));
+}
+
+double frad(double lightDistance, double a0, double a1, double a2)
+{
+	// return 1 when lightDistance is INFINITY or when might divide by 0
+	if(lightDistance == INFINITY || (a2 == 0 && a1 == 0 && a0 == 0)) return 1.0;
+	else return 1/(a2*sqr(lightDistance) + a1 * lightDistance + a0);
+}
+
+double fang(double angularA0, double theta, V3 v0, V3 vl)
+{
+	double alpha = rad_to_deg(acos(v3_dot(v0, vl)));
+	if(theta == 0) return 1.0; // not a spotlight
+	else if(theta < alpha) return 0.0; // not within spotlight
+	else return pow(v3_dot(v0,vl),angularA0);
 }
 
 // does the math to calculate a sphere intersection, and if the sphere was intersected then the distance to that sphere
