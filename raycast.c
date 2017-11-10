@@ -33,7 +33,7 @@ Pixel* raycast(FILE* fp, int width, int height)
 			double pz = cameraZ-1; // z coord is on screen
 			V3 ur = v3_unit(px,py,pz); // unit ray vector
 			int hitObjectIndex = shoot(ur);
-			illuminate(hitObjectIndex,r0,ur,rowCounter*width+columnCounter);		
+			illuminate(hitObjectIndex,r0,ur,rowCounter*height+columnCounter);		
 		}
     }
 
@@ -74,6 +74,7 @@ void illuminate(int hitObjectIndex, V3 r0, V3 ur, int pixMapIndex)
     color[1] = backgroundColorG; // ambient_color[1];
     color[2] = backgroundColorB; // ambient_color[2];
 
+    //if(pixMapIndex % 2 == 0) printf("%d - %d\t",pixMapIndex,hitObjectIndex);
     if(hitObjectIndex != -1)
     {
     	float closest_t;
@@ -96,8 +97,9 @@ void illuminate(int hitObjectIndex, V3 r0, V3 ur, int pixMapIndex)
 			free(objectN);
 		}
 
+		printf("%.02f, R0n[2]=%.02f,oN[1]=%.02f\t",closest_t,R0n[2],objectNormal[1]);
 
-	    for (int j = 0; j < lightCount; j++ ) 
+	    /*for (int j = 0; j < lightCount; j++ ) 
 	    {
 	      	// Shadow test
 	    	V3 Rdn = v3_subtract(lights[j]->position, R0n); // vector from that location to light
@@ -161,7 +163,7 @@ void illuminate(int hitObjectIndex, V3 r0, V3 ur, int pixMapIndex)
 			free(v0);
 			free(vl);
 			free(reflection);
-		}
+		}*/
 		free(R0n);
 		free(objectNormal);
 	}
