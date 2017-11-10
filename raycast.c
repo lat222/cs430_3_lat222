@@ -156,14 +156,8 @@ void illuminate(int hitObjectIndex, V3 r0, V3 ur, int pixMapIndex)
 				V3 diffuse = objects[hitObjectIndex]->diffuse_color; // uses object's diffuse color
 				V3 specular = objects[hitObjectIndex]->specular_color; // uses object's specular color
 
-				double foundFrad;
-				double foundFang;
-				// handle point lights
-				if(lights[j]->theta == 0) foundFrad = frad(lightDistance, lights[j]->radialA0,lights[j]->radialA1,lights[j]->radialA2);
-				else foundFrad = 0;
-				// handle spot lights
-				if(lights[j]->theta != 0) foundFang = fang(lights[j]->angularA0,lights[j]->theta,v0,vl);
-				else foundFang = 0;
+				double foundFrad = frad(lightDistance, lights[j]->radialA0,lights[j]->radialA1,lights[j]->radialA2);
+				double foundFang = fang(lights[j]->angularA0,lights[j]->theta,v0,vl);
 
 				color[0] += foundFrad*foundFang*(diffuse[0] + specular[0]);
 				color[1] += foundFrad*foundFang*(diffuse[1] + specular[1]);
@@ -686,9 +680,9 @@ void read_file(FILE* fp)
 									}
 									else
 									{
-										object->radialA0 = INFINITY;
-										object->radialA1 = INFINITY;
-										object->radialA2 = INFINITY;
+										object->radialA0 = 0;
+										object->radialA1 = 0;
+										object->radialA2 = 0;
 										propertiesAdded += 3;
 									}
 
