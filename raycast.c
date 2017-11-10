@@ -86,15 +86,7 @@ void illuminate(int hitObjectIndex, V3 r0, V3 ur, int pixMapIndex)
       	}
     	V3 R0n = v3_add(v3_scale(ur,closest_t), r0); // location of current object pixel
 
-    	// find the current object normal
-    	V3 objectNormal;
-		if(objects[hitObjectIndex]->type == 'p') objectNormal = objects[hitObjectIndex]->normal; // plane
-		else if(objects[hitObjectIndex]->type == 's') 
-		{
-			V3 objectN = v3_subtract(R0n,objects[hitObjectIndex]->position); // sphere
-			objectNormal = v3_unit(objectN[0],objectN[1],objectN[2]);
-			free(objectN);
-		}
+    	// TODO: find current object normal
 
 
 	    for (int j = 0; j < lightCount; j++ ) 
@@ -152,12 +144,7 @@ void illuminate(int hitObjectIndex, V3 r0, V3 ur, int pixMapIndex)
 				color[2] += foundFrad*foundFang*(diffuse[2] + specular[2]);
 
 			}
-			free(Rdn);
-			free(v0);
-			free(reflection);
 		}
-		free(R0n);
-		free(objectNormal);
 	}
     // The color has now been calculated
     pixMap[pixMapIndex].R = (unsigned char)(clamp(color[0]));
