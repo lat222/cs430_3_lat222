@@ -97,9 +97,8 @@ void illuminate(int hitObjectIndex, V3 r0, V3 ur, int pixMapIndex)
 			free(objectN);
 		}
 
-		printf("%.02f, R0n[2]=%.02f,oN[1]=%.02f\t",closest_t,R0n[2],objectNormal[1]);
-
-	    /*for (int j = 0; j < lightCount; j++ ) 
+		//printf("%.02f, R0n[2]=%.02f,oN[1]=%.02f\t",closest_t,R0n[2],objectNormal[1]);
+	    for (int j = 0; j < lightCount; j++ ) 
 	    {
 	      	// Shadow test
 	    	V3 Rdn = v3_subtract(lights[j]->position, R0n); // vector from that location to light
@@ -112,7 +111,15 @@ void illuminate(int hitObjectIndex, V3 r0, V3 ur, int pixMapIndex)
 	    	v0 = v3_unit(v0[0],v0[1],v0[2]);
 
 	    	// unit vector of the light's direction vector
-	    	V3 vl = v3_unit(lights[j]->direction[0],lights[j]->direction[1],lights[j]->direction[2]);
+	 		V3 vl;
+	 		if(lights[j]->theta != 0) vl = v3_unit(lights[j]->direction[0],lights[j]->direction[1],lights[j]->direction[2]);
+	 		else
+	 		{
+	 			vl = malloc(sizeof(double)*3);
+	 			vl[0] = INFINITY;
+	 			vl[1] = INFINITY;
+	 			vl[2] = INFINITY;
+	 		}
 
 			// find unit reflection vector
 			// TODO: what is the equation for the reflection vector???
@@ -149,21 +156,24 @@ void illuminate(int hitObjectIndex, V3 r0, V3 ur, int pixMapIndex)
 				V3 diffuse = objects[hitObjectIndex]->diffuse_color; // uses object's diffuse color
 				V3 specular = objects[hitObjectIndex]->specular_color; // uses object's specular color
 
-				double foundFrad = frad(lightDistance, lights[j]->radialA0,lights[j]->radialA1,lights[j]->radialA2);
-				double foundFang = fang(lights[j]->angularA0,lights[j]->theta,v0,vl);
+				double foundFrad;
+				double foundFang;
+				// handle point lights
+				if(lights[j]->theta == 0) foundFrad = frad(lightDistance, lights[j]->radialA0,lights[j]->radialA1,lights[j]->radialA2);
+				else foundFrad = 0;
+				// handle spot lights
+				if(lights[j]->theta != 0) foundFang = fang(lights[j]->angularA0,lights[j]->theta,v0,vl);
+				else foundFang = 0;
 
 				color[0] += foundFrad*foundFang*(diffuse[0] + specular[0]);
 				color[1] += foundFrad*foundFang*(diffuse[1] + specular[1]);
 				color[2] += foundFrad*foundFang*(diffuse[2] + specular[2]);
 
-				free(diffuse);
-				free(specular);
 			}
 			free(Rdn);
 			free(v0);
-			free(vl);
 			free(reflection);
-		}*/
+		}
 		free(R0n);
 		free(objectNormal);
 	}
@@ -662,7 +672,27 @@ void read_file(FILE* fp)
 							}
 							else if(property_read_in == 't')
 							{
-								if(strcmp(token,"0") == 0 || atof(token) != 0) object->theta = atof(token);
+								if(strcmp(token,"0") == 0 || atof(token) != 0) 
+								{
+									object->theta = atof(token);
+									if(object->theta == 0)
+									{
+										object->angularA0 = INFINITY;
+										object->direction = malloc(sizeof(double)*3);
+										object->direction[0] = INFINITY;
+										object->direction[0] = INFINITY;
+										object->direction[0] = INFINITY;
+										propertiesAdded += 2;
+									}
+									else
+									{
+										object->radialA0 = INFINITY;
+										object->radialA1 = INFINITY;
+										object->radialA2 = INFINITY;
+										propertiesAdded += 3;
+									}
+
+								}
 								else
 								{
 									fprintf(stderr, "ERROR: Values for the Theta Property must be numbers.\n");
@@ -741,20 +771,14 @@ void read_file(FILE* fp)
 				}
 				token = strtok(NULL," ,\t:[]");
 			}
-
-			if(propertiesAdded < 3)
+			if(propertiesAdded != 4 && object->type != 'l')
 			{
-				fprintf(stderr, "ERROR: At least three properties should have been read in -- NOT %d\n", propertiesAdded);
+				fprintf(stderr, "ERROR: Five properties (specular_color,diffuse_color,position, and radius or normal) should have been read in for sphere or plane object\n");
 				exit(0);
 			}
-			else if(propertiesAdded > 5 && object->type != 'l')
+			else if(propertiesAdded != 8 && object->type == 'l')
 			{
-				fprintf(stderr, "ERROR: No more than five properties should have been read in for sphere or plane object\n");
-				exit(0);
-			}
-			else if(propertiesAdded > 6 && object->type == 'l')
-			{
-				fprintf(stderr, "ERROR: No more than five properties should have been read in for sphere or plane object\n");
+				fprintf(stderr, "ERROR: Light object does not have the correct number of properties\n");
 				exit(0);
 			}
 			// store the object depending on its type
