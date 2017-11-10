@@ -13,7 +13,7 @@ Pixel* raycast(FILE* fp, int width, int height)
 	
 	// Finished reading in file, now is the time to start Raycasting!
 
-	Pixel* pixMap = (Pixel*) malloc(sizeof(Pixel)*width*height);
+	pixMap = (Pixel*) malloc(sizeof(Pixel)*width*height);
 
 	r0 = malloc(sizeof(double)*3);
 	r0[0] = (double) cameraX;
@@ -33,10 +33,7 @@ Pixel* raycast(FILE* fp, int width, int height)
 			double pz = cameraZ-1; // z coord is on screen
 			V3 ur = v3_unit(px,py,pz); // unit ray vector
 			int hitObjectIndex = shoot(ur);
-			V3 pixelColor = illuminate(hitObjectIndex,r0,ur);
-			pixMap[rowCounter*width+columnCounter].R = pixelColor[0]; // return node with the color of what was hit first
-			pixMap[rowCounter*width+columnCounter].G = pixelColor[1];
-			pixMap[rowCounter*width+columnCounter].B = pixelColor[2];		
+			illuminate(hitObjectIndex,r0,ur,rowCounter*width+columnCounter);		
 		}
     }
 
@@ -70,87 +67,106 @@ int shoot(V3 rayVector)
 	return hitObjectIndex; // should only be a postive number or -1
 }
 
-void illuminate(int hitObjectIndex, V3 r0, V3 ur, int row, int column, int width)
+void illuminate(int hitObjectIndex, V3 r0, V3 ur, int pixMapIndex)
 {
 	V3 color = malloc(sizeof(double)*3);
     color[0] = backgroundColorR; // ambient_color[0];
     color[1] = backgroundColorG; // ambient_color[1];
     color[2] = backgroundColorB; // ambient_color[2];
 
-    for (int j = 0; j < lightCount; j++ ) 
+    if(hitObjectIndex != -1)
     {
-      	// Shadow test
-      	float closest_t;
-      	if(objects[hitObjectIndex]->type == 'p') closest_t = ray_plane_intersection(ur,objects[hitObjectIndex]);
-      	else if(objects[hitObjectIndex]->type == 's') closest_t = ray_sphere_intersection(ur,objects[hitObjectIndex]);
 
-    	// TODO: This is a different R0, then the old one...
-    	V3 R0n = v3_add(v3_scale(ur,closest_t), R0);
-    	V3 Rdn = v3_subtract(light[j]->position, R0n);
+	    for (int j = 0; j < lightCount; j++ ) 
+	    {
+	      	// Shadow test
+	      	float closest_t;
+	      	if(objects[hitObjectIndex]->type == 'p') closest_t = ray_plane_intersection(ur,objects[hitObjectIndex]);
+	      	else if(objects[hitObjectIndex]->type == 's') closest_t = ray_sphere_intersection(ur,objects[hitObjectIndex]);
 
-      	int shadowIndex = -1;
-		double t = -1; // no intersection so far
-		// loop through the entire linked list of objects and set t to the closest intersected object
-		for(int i = 0; i < objectCount; i++ )
-		{
+	    	V3 R0n = v3_add(v3_scale(ur,closest_t), r0); // location of current object pixel
+	    	V3 Rdn = v3_subtract(lights[j]->position, R0n); // vector from that location to light
+	    	Rdn = v3_unit(Rdn[0],Rdn[1],Rdn[2]); // make this a unit vector
+	    	float lightDistance = v3_distance(lights[j]->position,R0n); // calculate distance to light
 
-			if(i==hitObjectIndex) continue;
-			double result = -1;
-			// check if the object intersects with the vector
-			if(objects[i]->type == 's') result = ray_sphere_intersection(rayVector,objects[i]);
-			else if(objects[i]->type == 'p') result = ray_plane_intersection(rayVector,objects[i]);
-			else
+	    	// vector from light to object
+	    	V3 v0 = v3_subtract(R0n,lights[j]->position);
+	    	v0 = v3_unit(v0[0],v0[1],v0[2]);
+
+	    	// unit vector of the light's direction vector
+	    	V3 vl = v3_unit(lights[j]->direction[0],lights[j]->direction[1],lights[j]->direction[2]);
+
+	    	// find the current object normal
+	    	V3 objectNormal;
+			if(objects[hitObjectIndex]->type == 'p') objectNormal = objects[hitObjectIndex]->normal; // plane
+			else if(objects[hitObjectIndex]->type == 's') 
 			{
-				fprintf(stderr, "ERROR: Objects can only be type sphere, plane, or light\n");
-				exit(0);
+				V3 objectN = v3_subtract(R0n,objects[hitObjectIndex]->position); // sphere
+				objectNormal = v3_unit(objectN[0],objectN[1],objectN[2]);
+				free(objectN);
 			}
 
-			if(result > 0 && (result < t || t == -1))	// this intersection is less than t is already so set t to this result and set hitobject to this object
+			// find unit reflection vector
+			// TODO: what is the equation for the reflection vector???
+			V3 reflection = v3_subtract(v0,v3_scale(objectNormal, 2*v3_dot(objectNormal,v0)));
+			reflection = v3_unit(reflection[0],reflection[1],reflection[2]);
+
+	      	int shadow = -1;
+			double t = -1; // no intersection so far
+			// loop through the entire linked list of objects and set t to the closest intersected object
+			for(int i = 0; i < objectCount; i++ )
 			{
-				t = result;
-				shadowIndex = i;
+
+				if(i==hitObjectIndex) continue;
+				// TODO: change Rdn in ray_sphere_intersections to deal with reflection
+				// check if the object intersects with the vector
+				if(objects[i]->type == 's') t = ray_sphere_intersection(Rdn,objects[i]);
+				else if(objects[i]->type == 'p') t = ray_plane_intersection(Rdn,objects[i]);
+				else
+				{
+					fprintf(stderr, "ERROR: Objects can only be type sphere, plane, or light\n");
+					exit(0);
+				}
+
+				if(t <= lightDistance && t > 0)	// something is casting a shadow over the object
+				{
+					shadow = 1;
+					break;
+				}
 			}
-		}
-		// there is nothing casting a shadow over the object
-      	if (shadowIndex == -1) 
-      	{
-			// N, L, R, V
-			V3 N;
-			if(objects[closest_shadow_object]->type == 'p') N = objects[closest_shadow_object]>normal; // plane
-			else if(objects[closest_shadow_object]->type == 's') N = v3_subtract(R0n,objects[closest_shadow_object]->position); // sphere
-			//L = Rdn; // light_position - Ron;
-			//R = reflection of L;
-			V3 V = Rd;
-			// TODO: find the diffuse and specular reflection
-			V3 diffuse = objects[hitObjectIndex]->diffuse_color; // uses object's diffuse color
-			V3 specular = objects[hitObjectIndex]->specular_color; // uses object's specular color
+			// there is nothing casting a shadow over the object
+	      	if (shadow == -1) 
+	      	{
+				// TODO: find the diffuse and specular reflection
+				V3 diffuse = objects[hitObjectIndex]->diffuse_color; // uses object's diffuse color
+				V3 specular = objects[hitObjectIndex]->specular_color; // uses object's specular color
 
-			double foundFrad = frad(lightDistance, lights[i]->radialA0,lights[i]->radialA1,lights[i]->radialA2);
-			double foundFang = fang(lights[i]->angularA0,lights[i]->theta,v0,v1);
+				double foundFrad = frad(lightDistance, lights[j]->radialA0,lights[j]->radialA1,lights[j]->radialA2);
+				double foundFang = fang(lights[j]->angularA0,lights[j]->theta,v0,vl);
 
-			color[0] += foundFrad*foundFang*(diffuse[0] + specular[0]);
-			color[1] += foundFrad*foundFang*(diffuse[1] + specular[1]);
-			color[2] += foundFrad*foundFang*(diffuse[2] + specular[2]);
+				color[0] += foundFrad*foundFang*(diffuse[0] + specular[0]);
+				color[1] += foundFrad*foundFang*(diffuse[1] + specular[1]);
+				color[2] += foundFrad*foundFang*(diffuse[2] + specular[2]);
+			}
 		}
 	}
     // The color has now been calculated
-    pixMap[row*width+column].R = (unsigned char)(maxColor * clamp(color[0]));
-    pixMap[row*width+column].G = (unsigned char)(255 * clamp(color[1]));
-    pixMap[row*width+column].B = (unsigned char)(255 * clamp(color[2]));
+    pixMap[pixMapIndex].R = (unsigned char)(clamp(color[0]));
+    pixMap[pixMapIndex].G = (unsigned char)(clamp(color[1]));
+    pixMap[pixMapIndex].B = (unsigned char)(clamp(color[2]));
 }
 
 double frad(double lightDistance, double a0, double a1, double a2)
 {
 	// return 1 when lightDistance is INFINITY or when might divide by 0
 	if(lightDistance == INFINITY || (a2 == 0 && a1 == 0 && a0 == 0)) return 1.0;
-	else return 1/(a2*sqr(lightDistance) + a1 * lightDistance + a0);
+	else return 1/(a2*lightDistance*lightDistance + a1 * lightDistance + a0);
 }
 
 double fang(double angularA0, double theta, V3 v0, V3 vl)
 {
-	double alpha = rad_to_deg(acos(v3_dot(v0, vl)));
 	if(theta == 0) return 1.0; // not a spotlight
-	else if(theta < alpha) return 0.0; // not within spotlight
+	else if(theta < to_degrees(acos(v3_dot(v0, vl)))) return 0.0; // not within spotlight
 	else return pow(v3_dot(v0,vl),angularA0);
 }
 
@@ -254,6 +270,11 @@ double v3_dot(V3 a, V3 b)
 	return a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
 }
 
+double v3_distance(V3 a, V3 b)
+{
+	return sqrt((b[0] - a[0]) * (b[0] - a[0])+ (b[1] - a[1]) * (b[1] - a[1]) + (b[2] - a[2]) * (b[2] - a[2]));
+}
+
 V3 v3_assign(double a, double b, double c)
 {
 	V3 vector = malloc(sizeof(double) * 3);
@@ -276,6 +297,19 @@ V3 v3_unit(double a, double b, double c)
 	vector[2] = c/length;
 
 	return vector;
+}
+
+// from https://stackoverflow.com/questions/14920675/is-there-a-function-in-c-language-to-calculate-degrees-radians
+double to_degrees(double radians)
+{
+    return radians * (180.0 / 3.14159265359);
+}
+
+double clamp(double value)
+{
+  if (value > 1.0) return 1.0;
+  else if (value < 0) return 0.0;
+  else return value;
 }
 
 void read_file(FILE* fp)
