@@ -8,7 +8,6 @@ Pixel* raycast(FILE* fp, int width, int height)
 		fprintf(stderr, "ERROR: No objects were read in\n");
 		exit(0);
 	}
-	// TODO: what to do for no light??
 
 	
 	// Finished reading in file, now is the time to start Raycasting!
@@ -97,7 +96,7 @@ void illuminate(int hitObjectIndex, V3 r0, V3 ur, int pixMapIndex)
 			free(objectN);
 		}
 
-		//printf("%.02f, R0n[2]=%.02f,oN[1]=%.02f\t",closest_t,R0n[2],objectNormal[1]);
+		
 	    for (int j = 0; j < lightCount; j++ ) 
 	    {
 	      	// Shadow test
@@ -111,18 +110,9 @@ void illuminate(int hitObjectIndex, V3 r0, V3 ur, int pixMapIndex)
 	    	v0 = v3_unit(v0[0],v0[1],v0[2]);
 
 	    	// unit vector of the light's direction vector
-	 		V3 vl;
-	 		if(lights[j]->theta != 0) vl = v3_unit(lights[j]->direction[0],lights[j]->direction[1],lights[j]->direction[2]);
-	 		else
-	 		{
-	 			vl = malloc(sizeof(double)*3);
-	 			vl[0] = INFINITY;
-	 			vl[1] = INFINITY;
-	 			vl[2] = INFINITY;
-	 		}
+	 		V3 vl = v3_unit(lights[j]->direction[0],lights[j]->direction[1],lights[j]->direction[2]);
 
 			// find unit reflection vector
-			// TODO: what is the equation for the reflection vector???
 			V3 reflection = v3_subtract(v0,v3_scale(objectNormal, 2*v3_dot(objectNormal,v0)));
 			reflection = v3_unit(reflection[0],reflection[1],reflection[2]);
 
@@ -152,7 +142,7 @@ void illuminate(int hitObjectIndex, V3 r0, V3 ur, int pixMapIndex)
 			// there is nothing casting a shadow over the object
 	      	if (shadow == -1) 
 	      	{
-				// TODO: find the diffuse and specular reflection, What to do when there is no specular color
+				// TODO: find the diffuse and specular reflection
 				V3 diffuse = objects[hitObjectIndex]->diffuse_color; // uses object's diffuse color
 				V3 specular = objects[hitObjectIndex]->specular_color; // uses object's specular color
 
@@ -556,7 +546,7 @@ void read_file(FILE* fp)
 								}
 								else
 								{
-									// malloc the space to add the pixel if nothing has been stored yet TODO: check if space was malloced???
+									// malloc the space to add the pixel if nothing has been stored yet
 									if(vectorNum == 0) object->pix = malloc(sizeof(double)*3);
 									if(vectorNum == 2) property_read_in = '\0';
 									// check that the value is valid and store it if it is
@@ -577,7 +567,7 @@ void read_file(FILE* fp)
 								}
 								else
 								{
-									// malloc the space to add the pixel if nothing has been stored yet TODO: check if space was malloced???
+									// malloc the space to add the pixel if nothing has been stored yet
 									if(vectorNum == 0) object->position = malloc(sizeof(double)*3);
 									if(vectorNum == 2) property_read_in = '\0';
 									// check that the value is valid and store it if it is
@@ -599,7 +589,7 @@ void read_file(FILE* fp)
 								}
 								else
 								{
-									// malloc the space to add the pixel if nothing has been stored yet TODO: check if space was malloced???
+									// malloc the space to add the pixel if nothing has been stored yet
 									if(vectorNum == 0) object->normal = malloc(sizeof(double)*3);
 									if(vectorNum == 2) property_read_in = '\0';
 									// check that the value is valid and store it if it is
@@ -631,7 +621,7 @@ void read_file(FILE* fp)
 								}
 								else
 								{
-									// malloc the space to add the pixel if nothing has been stored yet TODO: check if space was malloced???
+									// malloc the space to add the pixel if nothing has been stored yet 
 									if(vectorNum == 0) object->diffuse_color = malloc(sizeof(double)*3);
 									if(vectorNum == 2) property_read_in = '\0';
 									// check that the value is valid and store it if it is
@@ -652,7 +642,7 @@ void read_file(FILE* fp)
 								}
 								else
 								{
-									// malloc the space to add the pixel if nothing has been stored yet TODO: check if space was malloced???
+									// malloc the space to add the pixel if nothing has been stored yet 
 									if(vectorNum == 0) object->specular_color = malloc(sizeof(double)*3);
 									if(vectorNum == 2) property_read_in = '\0';
 									// check that the value is valid and store it if it is
@@ -743,7 +733,7 @@ void read_file(FILE* fp)
 								}
 								else
 								{
-									// malloc the space to add the pixel if nothing has been stored yet TODO: check if space was malloced???
+									// malloc the space to add the pixel if nothing has been stored yet 
 									if(vectorNum == 0) object->direction = malloc(sizeof(double)*3);
 									if(vectorNum == 2) property_read_in = '\0';
 									// check that the value is valid and store it if it is
